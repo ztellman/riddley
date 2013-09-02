@@ -82,6 +82,13 @@
         (map f body)))))
 
 (defn walk-exprs
+  "A walk function which only traverses valid Clojure expressions.  The `predicate` describes
+   whether the sub-form should be transformed.  If it returns true, `handler` is invoked, and
+   returns a transformed form.
+
+   Unlike `clojure.walk`, if the handler is called, the rest of the sub-form is not walked.
+   The handler function is responsible for recursively calling `walk-exprs` on the form it is
+   given."
   [predicate handler x]
   (let [x (macroexpand+ x)
         walk-exprs (partial walk-exprs predicate handler)
