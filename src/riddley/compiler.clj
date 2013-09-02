@@ -36,6 +36,8 @@
                    Compiler/METHOD nil}
      ~@body))
 
+;; if we don't do this in Java, the checkcasts emitted by Clojure cause an
+;; IllegalAccessError on Compiler$Expr.  Whee.
 (defn register-local [v x]
   (with-stub-vars
     (when-not (locals)
