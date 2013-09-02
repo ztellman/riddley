@@ -1,7 +1,6 @@
-    Walker is my name and I am the same. Riddley Walker. Walking my riddles 
-    where ever theyve took me and walking them now on this paper the same.
+> Walker is my name and I am the same. Riddley Walker. Walking my riddles where ever theyve took me and walking them now on this paper the same.
 
-                                          'Riddley Walker' by Russell Hoban
+from [Riddley Walker](http://en.wikipedia.org/wiki/Riddley_Walker) by Russell Hoban
 
 ### usage
 
