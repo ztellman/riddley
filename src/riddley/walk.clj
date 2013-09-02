@@ -6,7 +6,7 @@
   (and
     (sequential? x)
     (not (vector? x))
-    (not (map-entry? x))))
+    (not (instance? java.util.Map$Entry x))))
 
 (defn- macroexpand+
   "Expands both macros and inline functions."
@@ -102,7 +102,7 @@
                 'fn*    fn-handler
                 'let*   let-handler
                 'loop*  let-handler
-                'letfn* letfn-handler
+                'letfn* let-handler
                 'case*  case-handler
                 'catch  catch-handler
                 #(map %1 %2))
