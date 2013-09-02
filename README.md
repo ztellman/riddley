@@ -8,6 +8,8 @@
 
 from [Riddley Walker](http://en.wikipedia.org/wiki/Riddley_Walker) by Russell Hoban
 
+---
+
 Code may be data, but only some data is code.  If we want to perform a pervasive code transformation, using something like `clojure.walk` presents a few problems:
 
 * binding forms are treated the same as actual expressions
