@@ -10,11 +10,11 @@ from [Riddley Walker](http://en.wikipedia.org/wiki/Riddley_Walker) by Russell Ho
 
 ---
 
-Code may be data, but only some data is code.  If we want to perform a pervasive code transformation, using something like `clojure.walk` presents a few problems:
+Code may be data, but only some of that data is executable.  If we want to perform a pervasive code transformation, using something like `clojure.walk` presents a few problems:
 
 * binding forms are treated the same as actual expressions
 * `clojure.walk/macroexpand-all` will pass in a nil `&env` to all macros
-* inlined functions are not expanded
+* macroexpansion doesn't expand inlined functions
 
 This means that transforms that we intend to apply to expressions may have unintended consequences on a `fn`, `let`, or `case` form.  It also means that any macro which relies on `&env` will not compose with our transformation.  Finally, if inlined functions aren't expanded, this can break certain transformations.
 
