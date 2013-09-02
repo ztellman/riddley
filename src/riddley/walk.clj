@@ -11,19 +11,22 @@
 (defn- macroexpand+
   "Expands both macros and inline functions."
   [x]
-  (let [x* (macroexpand x)]
-    (if-let [inline-fn (and (seq? x*)
-                         (symbol? (first x*))
-                         (not (-> x* meta ::transformed))
+  (let [x' (macroexpand x)]
+    (if-let [inline-fn (and (seq? x')
+                         (symbol? (first x'))
+                         (not (-> x' meta ::transformed))
                          (-> x first resolve meta :inline))]
-      (let [x** (apply inline-fn (rest x*))]
+      (let [x'' (apply inline-fn (rest x'))]
         (recur
           ;; unfortunately, static function calls can look a lot like what we just
           ;; expanded, so prevent infinite expansion
-          (if (= '. (first x**))
-            (concat (butlast x**) [(with-meta (last x**) {::transformed true})])
-            x**)))
-      x*)))
+          (if (= '. (first x''))
+            (concat (butlast x'')
+              [(if (instance? clojure.lang.IObj (last x''))
+                 (with-meta (last x'') {::transformed true})
+                 (last x''))])
+            x'')))
+      x')))
 
 ;;;
 
@@ -77,7 +80,7 @@
 (defn- catch-handler [f x]
   (let [[_ type var & body] x]
     (cmp/with-lexical-scoping
-      (cmp/register-arg (with-meta var {:tag (.getName ^Class type)}))
+      (cmp/register-arg (with-meta var {:tag type}))
       (list* 'catch type var
         (map f body)))))
 
@@ -105,7 +108,7 @@
                 'letfn* let-handler
                 'case*  case-handler
                 'catch  catch-handler
-                #(map %1 %2))
+                #(doall (map %1 %2)))
               walk-exprs x)
              
              (instance? java.util.Map$Entry x)
@@ -115,6 +118,9 @@
              
              (vector? x)
              (vec (map walk-exprs x))
+
+             (instance? clojure.lang.IRecord x)
+             x
              
              (map? x)
              (into {} (map walk-exprs x))

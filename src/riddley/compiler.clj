@@ -3,12 +3,13 @@
     [clojure.lang
      Var
      Compiler
-     Compiler$ObjMethod]
+     Compiler$ObjMethod
+     Compiler$ObjExpr]
     [riddley
      Util]))
 
 (def stub-method
-  (proxy [Compiler$ObjMethod] [nil nil]))
+  (proxy [Compiler$ObjMethod] [(Compiler$ObjExpr. nil) nil]))
 
 (defn tag-of [x]
   (when-let [tag (-> x meta :tag)]
@@ -16,7 +17,7 @@
                 (if (instance? Class tag)
                   (.getName ^Class tag)
                   (name tag)))]
-      (when-not (= sym 'java.lang.Object)
+      (when-not (= 'java.lang.Object sym)
         sym))))
 
 (let [n (atom 0)]
@@ -33,7 +34,7 @@
 
 (defmacro with-stub-vars [& body]
   `(with-bindings {Compiler/CLEAR_SITES nil
-                   Compiler/METHOD nil}
+                   Compiler/METHOD stub-method}
      ~@body))
 
 ;; if we don't do this in Java, the checkcasts emitted by Clojure cause an
@@ -43,16 +44,20 @@
     (when-not (locals)
       (alter-var-root Compiler/LOCAL_ENV (constantly {})))
     (.set ^Var Compiler/LOCAL_ENV
-      (assoc (locals)
-        v (Util/localBinding (local-id) v (tag-of v) x)))))
+
+      ;; we want to allow metadata on the symbols to persist, so remove old symbols first
+      (-> (locals)
+        (dissoc v)
+        (assoc v (Util/localBinding (local-id) v (tag-of v) x))))))
 
 (defn register-arg [x]
   (with-stub-vars
     (when-not (locals)
       (alter-var-root Compiler/LOCAL_ENV (constantly {})))
     (.set ^Var Compiler/LOCAL_ENV
-      (assoc (locals)
-        x (Util/localArgument (local-id) x (tag-of x))))))
+      (-> (locals)
+        (dissoc x)
+        (assoc x (Util/localArgument (local-id) x (tag-of x)))))))
 
 
 
