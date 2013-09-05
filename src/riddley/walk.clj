@@ -81,6 +81,33 @@
           [k v])))
     vec))
 
+(defn- reify-handler [f x]
+  (let [[_ classes & fns] x]
+    (list* 'reify* classes
+      (doall
+        (map
+          (fn [[nm args & body]]
+            (cmp/with-lexical-scoping
+              (doseq [arg args]
+                (cmp/register-arg arg))
+              (list* nm args (doall (map f body)))))
+          fns)))))
+
+(defn- deftype-handler [f x]
+  (let [[_ type resolved-type args _ interfaces & fns] x]
+    (cmp/with-lexical-scoping
+      (doseq [arg args]
+        (cmp/register-arg arg))
+      (list* 'deftype* type resolved-type args :implements interfaces
+        (doall
+          (map
+            (fn [[nm args & body]]
+              (cmp/with-lexical-scoping
+                (doseq [arg args]
+                  (cmp/register-arg arg))
+                (list* nm args (doall (map f body)))))
+            fns))))))
+
 (defn- let-handler [f x]
   (cmp/with-lexical-scoping
     (doall

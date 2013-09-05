@@ -11,6 +11,9 @@
 
 (defrecord Test [x])
 
+(defprotocol TestP
+  (n [_]))
+
 (deftest test-walk-exprs
   ;; the first and third numbers get incremented, but not the second
   (is (= 4 (inc-numbers (case 1 2 3))))
@@ -29,7 +32,21 @@
              (try
                (/ 2 -1) ()
                (catch Exception e
-                 1))))))
+                 1)))))
+
+  (is (= 4 (n
+             (inc-numbers
+               (let [n 1]
+                 (reify TestP (n [_] (+ 1 n))))))))
+
+  (is (= 4 (n
+             (let [n 100]
+               (eval
+                 '(riddley.walk-test/inc-numbers
+                    (deftype Foo [n]
+                      riddley.walk-test/TestP
+                      (n [_] (+ 1 n)))
+                    (Foo. 1))))))))
 
 (deftest test-macro-shadowing
   (is (= :yes
