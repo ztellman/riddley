@@ -1,10 +1,10 @@
 (ns riddley.walk-test
   (:require
     [clojure.test :refer :all]
-    [riddley.walk :refer :all]))
+    [riddley.walk :as r]))
 
 (defmacro inc-numbers [& body]
-  (walk-exprs
+  (r/walk-exprs
     number?
     inc
     `(do ~@body)))
@@ -30,3 +30,12 @@
                (/ 2 -1) ()
                (catch Exception e
                  1))))))
+
+(deftest test-macro-shadowing
+  (is (= :yes
+        (inc-numbers
+          ((fn let [x]
+             (if (= x 0)
+               :yes
+               (let 0)))
+           2)))))
