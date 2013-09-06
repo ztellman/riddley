@@ -15,38 +15,44 @@
   ([x]
      (macroexpand x nil))
   ([x special-forms]
-     (if (seq? x)
-       (let [frst (first x)]
-      
-         (if (or
-               (contains? (set special-forms) frst)
-               (contains? (cmp/locals) frst))
+     (cmp/with-base-env
+       (if (seq? x)
+         (let [frst (first x)]
 
-           ;; might look like a macro, but for our purposes it isn't
-           x
-
-           (let [x' (macroexpand-1 x)]
-             (if-not (identical? x x')
-               (recur x' special-forms)
-
-               ;; if we can't macroexpand any further, check if it's an inlined function
-               (if-let [inline-fn (and (seq? x')
-                                    (symbol? (first x'))
-                                    (not (-> x' meta ::transformed))
-                                    (-> x first resolve meta :inline))]
-                 (let [x'' (apply inline-fn (rest x'))]
-                   (recur
-                     ;; unfortunately, static function calls can look a lot like what we just
-                     ;; expanded, so prevent infinite expansion
-                     (if (= '. (first x''))
-                       (concat (butlast x'')
-                         [(if (instance? clojure.lang.IObj (last x''))
-                            (with-meta (last x'') {::transformed true})
-                            (last x''))])
-                       x'')
-                     special-forms))
-                 x')))))
-       x)))
+           (if (or
+                 (contains? (set special-forms) frst)
+                 (contains? (cmp/locals) frst))
+             
+             ;; might look like a macro, but for our purposes it isn't
+             x
+             
+             (let [x' (macroexpand-1 x)]
+               (if-not (identical? x x')
+                 (macroexpand x' special-forms)
+                 
+                 ;; if we can't macroexpand any further, check if it's an inlined function
+                 (if-let [inline-fn (and (seq? x')
+                                      (symbol? (first x'))
+                                      (-> x' meta ::transformed not)
+                                      (-> x' first resolve meta :inline))]
+                   (let [x'' (apply inline-fn (rest x'))]
+                     (macroexpand
+                       ;; unfortunately, static function calls can look a lot like what we just
+                       ;; expanded, so prevent infinite expansion
+                       (if (= '. (first x''))         
+                         (with-meta
+                           (concat (butlast x'')
+                             [(if (instance? clojure.lang.IObj (last x''))
+                                (with-meta (last x'')
+                                  (merge
+                                    (meta (last x''))
+                                    {::transformed true}))
+                                (last x''))])
+                           (meta x''))
+                         x'')
+                       special-forms))
+                   x')))))
+         x))))
 
 ;;;
 
@@ -61,15 +67,25 @@
                            (list* (first x)
                              (map f (rest x))))))]
 
-    ;; register a local for the function, if it's named
-    (when-let [nm (second prelude)]
-      (cmp/register-local nm
-        (list* 'fn* nm
-          (map #(take 1 %) remainder))))
+    (cmp/with-lexical-scoping
+
+      ;; register a local for the function, if it's named
+      (when-let [nm (second prelude)]
+        (cmp/register-local nm
+          (list* 'fn* nm
+            (map #(take 1 %) remainder))))
     
-    (concat
-      prelude
-      (map body-handler remainder))))
+      (concat
+        prelude
+        (if (seq? (first remainder))
+          (doall (map body-handler remainder))
+          [(body-handler remainder)])))))
+
+(defn- def-handler [f x]
+  (let [[_ n form] x]
+    (cmp/with-lexical-scoping
+      (cmp/register-local n '())
+      (list 'def n (f form)))))
 
 (defn- let-bindings [f x]
   (->> x
@@ -153,51 +169,54 @@
   ([predicate handler x]
      (walk-exprs predicate handler nil x))
   ([predicate handler special-forms x]
-     (let [x (macroexpand x special-forms)
-           walk-exprs (partial walk-exprs predicate handler special-forms)
-           x' (cond
+     (cmp/with-base-env
+       (let [x (macroexpand x special-forms)
+             walk-exprs (partial walk-exprs predicate handler special-forms)
+             x' (cond
 
-                (predicate x)
-                (handler x)
-             
-                (walkable? x)
-                ((condp = (first x)
-                   'fn*    fn-handler
-                   'let*   let-handler
-                   'loop*  let-handler
-                   'letfn* let-handler
-                   'case*  case-handler
-                   'catch  catch-handler
-                   #(doall (map %1 %2)))
-                 walk-exprs x)
-             
-                (instance? java.util.Map$Entry x)
-                (clojure.lang.MapEntry.
-                  (walk-exprs (key x))
-                  (walk-exprs (val x)))
-             
-                (vector? x)
-                (vec (map walk-exprs x))
+                  (predicate x)
+                  (handler x)
+                  
+                  (walkable? x)
+                  ((condp = (first x)
+                     'def    def-handler
+                     'fn*    fn-handler
+                     'let*   let-handler
+                     'loop*  let-handler
+                     'letfn* let-handler
+                     'case*  case-handler
+                     'catch  catch-handler
+                     'reify* reify-handler
+                     'deftype* deftype-handler
+                     #(doall (map %1 %2)))
+                   walk-exprs x)
+                  
+                  (instance? java.util.Map$Entry x)
+                  (clojure.lang.MapEntry.
+                    (walk-exprs (key x))
+                    (walk-exprs (val x)))
+                  
+                  (vector? x)
+                  (vec (map walk-exprs x))
 
-                (instance? clojure.lang.IRecord x)
-                x
-             
-                (map? x)
-                (into {} (map walk-exprs x))
-             
-                (set? x)
-                (set (map walk-exprs x))
-             
-                :else
-                x)]
-       (if (instance? clojure.lang.IObj x')
-         (with-meta x' (merge (meta x) (meta x')))
-         x'))))
+                  (instance? clojure.lang.IRecord x)
+                  x
+                  
+                  (map? x)
+                  (into {} (map walk-exprs x))
+                  
+                  (set? x)
+                  (set (map walk-exprs x))
+                  
+                  :else
+                  x)]
+         (if (instance? clojure.lang.IObj x')
+           (with-meta x' (merge (meta x) (meta x')))
+           x')))))
 
 ;;;
 
 (defn macroexpand-all
   "Recursively macroexpands all forms, preserving the &env special variables."
   [x]
-  (with-bindings {clojure.lang.Compiler/LOCAL_ENV {}}
-    (walk-exprs (constantly false) nil x)))
+  (walk-exprs (constantly false) nil x))

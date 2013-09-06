@@ -32,6 +32,12 @@
   (when (.isBound Compiler/LOCAL_ENV)
     @Compiler/LOCAL_ENV))
 
+(defmacro with-base-env [& body]
+  `(with-bindings (if (locals)
+                    {}
+                    {Compiler/LOCAL_ENV {}})
+     ~@body))
+
 (defmacro with-lexical-scoping
   "Defines a lexical scope where new locals may be registered."
   [& body]
@@ -49,8 +55,6 @@
   "Registers a locally bound variable `v`, which is being set to form `x`."
   [v x]
   (with-stub-vars
-    (when-not (locals)
-      (alter-var-root Compiler/LOCAL_ENV (constantly {})))
     (.set ^Var Compiler/LOCAL_ENV
 
       ;; we want to allow metadata on the symbols to persist, so remove old symbols first
@@ -62,8 +66,6 @@
   "Registers a function argument `x`."
   [x]
   (with-stub-vars
-    (when-not (locals)
-      (alter-var-root Compiler/LOCAL_ENV (constantly {})))
     (.set ^Var Compiler/LOCAL_ENV
       (-> (locals)
         (dissoc x)
