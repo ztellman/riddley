@@ -21,7 +21,7 @@ This means that transforms that we intend to apply to expressions may have unint
 ### usage
 
 ```clj
-[riddley "0.1.2"]
+[riddley "0.1.4"]
 ```
 
 Riddley provides a correct `riddley.walk/macroexpand-all`, which preserves the binding information in `&env` and expands inlined functions, and `riddley.walk/walk-exprs`, which is a general mechanism for code walking and transformation.
