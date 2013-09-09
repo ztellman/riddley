@@ -34,6 +34,9 @@
                  (if-let [inline-fn (and (seq? x')
                                       (symbol? (first x'))
                                       (-> x' meta ::transformed not)
+                                      (or
+                                        (-> x' first resolve meta :inline-arities not)
+                                        (-> x' first resolve meta :inline-arities (contains? (count (rest x')))))
                                       (-> x' first resolve meta :inline))]
                    (let [x'' (apply inline-fn (rest x'))]
                      (macroexpand
