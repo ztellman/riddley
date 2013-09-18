@@ -89,7 +89,7 @@
   (let [[_ n form] x]
     (cmp/with-lexical-scoping
       (cmp/register-local n '())
-      (list 'def n (f form)))))
+      (list 'def (f n) (f form)))))
 
 (defn- let-bindings [f x]
   (->> x
@@ -211,6 +211,10 @@
                   
                   (set? x)
                   (set (map walk-exprs x))
+
+                  ;; special case to handle clojure.test
+                  (and (symbol? x) (-> x meta :test))
+                  (vary-meta x update-in [:test] walk-exprs)
                   
                   :else
                   x)]
