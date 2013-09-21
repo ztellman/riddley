@@ -63,6 +63,8 @@
 (defn- fn-handler [f x]
   (let [prelude (take-while (complement sequential?) x)
         remainder (drop (count prelude) x)
+        remainder (if (vector? (first remainder))
+                    (list remainder) remainder)
         body-handler (fn [x]
                        (cmp/with-lexical-scoping
                          (doseq [arg (first x)]

@@ -56,3 +56,8 @@
                :yes
                (let 0)))
            2)))))
+
+(deftest catch-old-fn*-syntax
+  (is (= (r/walk-exprs (constantly false) identity
+                       '(fn* tst [x seq]))
+         '(fn* tst ([x seq])))))
