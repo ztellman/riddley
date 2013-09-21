@@ -61,3 +61,8 @@
   (is (= (r/walk-exprs (constantly false) identity
                        '(fn* tst [x seq]))
          '(fn* tst ([x seq])))))
+
+(deftest do-not-macroexpand-quoted-things
+  (is (= '(def p '(fn []))
+         (r/walk-exprs (constantly false) identity
+                       '(def p '(fn []))))))
