@@ -33,10 +33,11 @@
     @Compiler/LOCAL_ENV))
 
 (defmacro with-base-env [& body]
-  `(with-bindings (if (locals)
-                    {}
-                    {Compiler/LOCAL_ENV {}})
-     ~@body))
+  `(binding [*warn-on-reflection* false]
+     (with-bindings (if (locals)
+                      {}
+                      {Compiler/LOCAL_ENV {}})
+       ~@body)))
 
 (defmacro with-lexical-scoping
   "Defines a lexical scope where new locals may be registered."
