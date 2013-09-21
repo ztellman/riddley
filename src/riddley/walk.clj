@@ -173,16 +173,20 @@
    Including `fn`, `let`, or other binding forms can break local variable analysis, so use
    with caution."
   ([predicate handler x]
-     (walk-exprs predicate handler nil x))
-  ([predicate handler special-forms x]
+     (walk-exprs predicate handler nil true x))
+  ([predicate handler special-forms macroexpand? x]
      (cmp/with-base-env
-       (let [x (macroexpand x special-forms)
-             walk-exprs (partial walk-exprs predicate handler special-forms)
+       (let [x (if macroexpand? (macroexpand x special-forms) x)
+             walk-exprs* (partial walk-exprs predicate handler special-forms)
+             walk-exprs  (partial walk-exprs* macroexpand?)
              x' (cond
 
                   (predicate x)
                   (handler x)
-                  
+
+                  (and (walkable? x) (= 'quote (first x)))
+                  (list 'quote (walk-exprs* false (second x)))
+
                   (walkable? x)
                   ((condp = (first x)
                      'def    def-handler
