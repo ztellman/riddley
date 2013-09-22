@@ -167,7 +167,7 @@
            (if (walkable? mem-or-meth)
              (list* (first mem-or-meth) (map f (rest mem-or-meth)))
              mem-or-meth)
-           (map f remainder))))
+           (doall (map f remainder)))))
 
 (defn walk-exprs
   "A walk function which only traverses valid Clojure expressions.  The `predicate` describes
