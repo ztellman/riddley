@@ -160,6 +160,15 @@
       (list* 'catch type var
         (map f body)))))
 
+(defn- dot-handler [f x]
+  (let [[_ hostexpr mem-or-meth & remainder] x]
+    (list* '.
+           hostexpr
+           (if (walkable? mem-or-meth)
+             (list* (first mem-or-meth) (map f (rest mem-or-meth)))
+             mem-or-meth)
+           (map f remainder))))
+
 (defn walk-exprs
   "A walk function which only traverses valid Clojure expressions.  The `predicate` describes
    whether the sub-form should be transformed.  If it returns true, `handler` is invoked, and
@@ -194,6 +203,7 @@
                      'catch  catch-handler
                      'reify* reify-handler
                      'deftype* deftype-handler
+                     '.      dot-handler
                      #(doall (map %1 %2)))
                    walk-exprs x)
                   
