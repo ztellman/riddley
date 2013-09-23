@@ -61,3 +61,7 @@
   (is (= (r/walk-exprs (constantly false) identity
                        '(fn* tst [x seq]))
          '(fn* tst ([x seq])))))
+
+(deftest dot-expansion
+  (is (= (r/macroexpand-all '(bit-and 2 1))
+         '(. clojure.lang.Numbers (and 2 1)))))
