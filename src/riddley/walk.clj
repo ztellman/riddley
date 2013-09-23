@@ -165,7 +165,8 @@
     (list* '.
            hostexpr
            (if (walkable? mem-or-meth)
-             (list* (first mem-or-meth) (map f (rest mem-or-meth)))
+             (list* (first mem-or-meth)
+                    (doall (map f (rest mem-or-meth))))
              mem-or-meth)
            (doall (map f remainder)))))
 
