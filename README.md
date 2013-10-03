@@ -35,6 +35,8 @@ riddley.walk> (walk-exprs number? inc '(let [n 1] (+ n 1)))
 
 Notice that `walk-exprs` implicitly macroexpands the form, including the inline form for `+`.  Unlike `clojure.walk`, if `handler` is called, sub-forms will not be walked.  The handler function is responsible for recursively calling `walk-exprs` on the form it's handed.
 
+Access to `&env` is available via `(riddley.compiler/locals)` if you need it as part of your transformation.
+
 Full documentation can be found [here](http://ideolalia.com/riddley/).
 
 ### license
