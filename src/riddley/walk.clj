@@ -10,17 +10,18 @@
     (not (instance? java.util.Map$Entry x))))
 
 (defn macroexpand
-  "Expands both macros and inline functions. Optionally takes a set of `special-forms` which
-   shouldn't be macroexpanded, and honors local bindings."
+  "Expands both macros and inline functions. Optionally takes a `special-form?` predicate which
+   identifies first elements of expressions that shouldn't be macroexpanded, and honors local
+   bindings."
   ([x]
      (macroexpand x nil))
-  ([x special-forms]
+  ([x special-form?]
      (cmp/with-base-env
        (if (seq? x)
          (let [frst (first x)]
 
            (if (or
-                 (contains? (set special-forms) frst)
+                 (and special-form? (special-form? frst))
                  (contains? (cmp/locals) frst))
              
              ;; might look like a macro, but for our purposes it isn't
@@ -28,7 +29,7 @@
              
              (let [x' (macroexpand-1 x)]
                (if-not (identical? x x')
-                 (macroexpand x' special-forms)
+                 (macroexpand x' special-form?)
                  
                  ;; if we can't macroexpand any further, check if it's an inlined function
                  (if-let [inline-fn (and (seq? x')
@@ -54,7 +55,7 @@
                                 (last x''))])
                            (meta x''))
                          x'')
-                       special-forms))
+                       special-form?))
                    x')))))
          x))))
 
@@ -179,19 +180,22 @@
    The handler function is responsible for recursively calling `walk-exprs` on the form it is
    given.
 
-   Macroexpansion can be halted by defining a set of `special-forms` which will be left alone.
+   Macroexpansion can be halted by defining a set of `special-form?` which will be left alone.
    Including `fn`, `let`, or other binding forms can break local variable analysis, so use
    with caution."
   ([predicate handler x]
      (walk-exprs predicate handler nil x))
-  ([predicate handler special-forms x]
+  ([predicate handler special-form? x]
      (cmp/with-base-env
-       (let [x (macroexpand x special-forms)
-             walk-exprs (partial walk-exprs predicate handler special-forms)
+       (let [x (macroexpand x special-form?)
+             walk-exprs' (partial walk-exprs predicate handler special-form?)
              x' (cond
 
                   (predicate x)
                   (handler x)
+
+                  (and (walkable? x) (= 'quote (first x)))
+                  (list* 'quote (walk-exprs predicate handler (constantly true) (rest x)))
                   
                   (walkable? x)
                   ((condp = (first x)
@@ -206,28 +210,28 @@
                      'deftype* deftype-handler
                      '.      dot-handler
                      #(doall (map %1 %2)))
-                   walk-exprs x)
+                   walk-exprs' x)
                   
                   (instance? java.util.Map$Entry x)
                   (clojure.lang.MapEntry.
-                    (walk-exprs (key x))
-                    (walk-exprs (val x)))
+                    (walk-exprs' (key x))
+                    (walk-exprs' (val x)))
                   
                   (vector? x)
-                  (vec (map walk-exprs x))
+                  (vec (map walk-exprs' x))
 
                   (instance? clojure.lang.IRecord x)
                   x
                   
                   (map? x)
-                  (into {} (map walk-exprs x))
+                  (into {} (map walk-exprs' x))
                   
                   (set? x)
-                  (set (map walk-exprs x))
+                  (set (map walk-exprs' x))
 
                   ;; special case to handle clojure.test
                   (and (symbol? x) (-> x meta :test))
-                  (vary-meta x update-in [:test] walk-exprs)
+                  (vary-meta x update-in [:test] walk-exprs')
                   
                   :else
                   x)]

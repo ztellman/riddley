@@ -65,3 +65,10 @@
 (deftest dot-expansion
   (is (= (r/macroexpand-all '(bit-and 2 1))
          '(. clojure.lang.Numbers (and 2 1)))))
+
+(deftest do-not-macroexpand-quoted-things
+  (is (= '(def p '(fn []))
+        (r/walk-exprs
+          (constantly false)
+          identity
+          '(def p '(fn []))))))
