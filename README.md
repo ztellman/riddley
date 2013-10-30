@@ -20,8 +20,10 @@ This means that transforms that we intend to apply to expressions may have unint
 
 ### usage
 
+[![Build Status](https://travis-ci.org/ztellman/riddley.png?branch=master)](https://travis-ci.org/ztellman/riddley)
+
 ```clj
-[riddley "0.1.4"]
+[riddley "0.1.5"]
 ```
 
 Riddley provides a correct `riddley.walk/macroexpand-all`, which preserves the binding information in `&env` and expands inlined functions, and `riddley.walk/walk-exprs`, which is a general mechanism for code walking and transformation.
