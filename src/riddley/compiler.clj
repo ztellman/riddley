@@ -61,7 +61,10 @@
       ;; we want to allow metadata on the symbols to persist, so remove old symbols first
       (-> (locals)
         (dissoc v)
-        (assoc v (Util/localBinding (local-id) v (tag-of v) x))))))
+        (assoc v (try
+                   (Util/localBinding (local-id) v (tag-of v) x)
+                   (catch Exception _
+                     ::analyze-failure)))))))
 
 (defn register-arg
   "Registers a function argument `x`."

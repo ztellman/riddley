@@ -187,7 +187,10 @@
      (walk-exprs predicate handler nil x))
   ([predicate handler special-form? x]
      (cmp/with-base-env
-       (let [x (macroexpand x special-form?)
+       (let [x (try
+                 (macroexpand x special-form?)
+                 (catch ClassNotFoundException _
+                   x))
              walk-exprs' (partial walk-exprs predicate handler special-form?)
              x' (cond
 
