@@ -1,4 +1,4 @@
-(defproject riddley "0.1.6-SNAPSHOT"
+(defproject riddley "0.1.7-SNAPSHOT"
   :description "code-walking without caveats"
   :license {:name "MIT License"
             :url "http://opensource.org/licenses/MIT"}
