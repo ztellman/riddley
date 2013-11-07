@@ -151,7 +151,7 @@
          (map
            (fn [[k [idx form]]]
              [k [idx (f form)]]))
-         (into {}))]
+         (into (sorted-map)))]
       suffix)))
 
 (defn- catch-handler [f x]
