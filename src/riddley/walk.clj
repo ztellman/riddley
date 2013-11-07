@@ -147,11 +147,14 @@
     (concat
       prefix
       [(f default)]
-      [(->> body
-         (map
-           (fn [[k [idx form]]]
-             [k [idx (f form)]]))
-         (into (sorted-map)))]
+      [(let [m (->> body
+                 (map
+                   (fn [[k [idx form]]]
+                     [k [idx (f form)]]))
+                 (into {}))]
+         (if (every? number? (keys m))
+           (into (sorted-map) m)
+           m))]
       suffix)))
 
 (defn- catch-handler [f x]
