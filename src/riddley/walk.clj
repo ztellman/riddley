@@ -197,12 +197,15 @@
              walk-exprs' (partial walk-exprs predicate handler special-form?)
              x' (cond
 
-                  (predicate x)
-                  (handler x)
+                  (and (walkable? x) (= 'var (first x)))
+                  (handler (eval x))
 
                   (and (walkable? x) (= 'quote (first x)))
                   (list* 'quote (walk-exprs predicate handler (constantly true) (rest x)))
                   
+                  (predicate x)
+                  (handler x)
+
                   (walkable? x)
                   ((condp = (first x)
                      'def    def-handler

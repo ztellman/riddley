@@ -57,6 +57,17 @@
                (let 0)))
            2)))))
 
+(def foo 1)
+
+(deftest test-var-evaluation
+  (is (= #{#'riddley.walk-test/foo}
+         (let [acc (atom #{})]
+           (r/walk-exprs 
+            (constantly false) 
+            #(do (swap! acc conj %) %)
+            '(#'riddley.walk-test/foo))
+           @acc))))
+
 (deftest catch-old-fn*-syntax
   (is (= (r/walk-exprs (constantly false) identity
                        '(fn* tst [x seq]))
