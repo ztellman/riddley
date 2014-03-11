@@ -163,7 +163,7 @@
       (when var
         (cmp/register-arg (with-meta var {:tag type})))
       (list* 'catch type var
-        (map f body)))))
+        (doall (map f body))))))
 
 (defn- dot-handler [f x]
   (let [[_ hostexpr mem-or-meth & remainder] x]
