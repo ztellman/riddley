@@ -160,7 +160,8 @@
 (defn- catch-handler [f x]
   (let [[_ type var & body] x]
     (cmp/with-lexical-scoping
-      (cmp/register-arg (with-meta var {:tag type}))
+      (when var
+        (cmp/register-arg (with-meta var {:tag type})))
       (list* 'catch type var
         (map f body)))))
 

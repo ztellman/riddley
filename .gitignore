@@ -9,4 +9,4 @@ pom.xml.asc
 /.nrepl-port
 push
 /doc
-
+.DS_Store*
