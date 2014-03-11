@@ -89,10 +89,10 @@
           [(body-handler remainder)])))))
 
 (defn- def-handler [f x]
-  (let [[_ n form] x]
+  (let [[_ n & r] x]
     (cmp/with-lexical-scoping
       (cmp/register-local n '())
-      (list 'def (f n) (f form)))))
+      (list* 'def (f n) (doall (map f r))))))
 
 (defn- let-bindings [f x]
   (->> x
