@@ -83,3 +83,7 @@
           (constantly false)
           identity
           '(def p '(fn []))))))
+
+(deftest handle-def-with-docstring
+  (is (= '(def x "docstring" (. clojure.lang.Numbers (add 1 2)))
+         (r/walk-exprs (constantly false) identity '(def x "docstring" (+ 1 2))))))
