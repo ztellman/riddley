@@ -168,7 +168,7 @@
 (defn- dot-handler [f x]
   (let [[_ hostexpr mem-or-meth & remainder] x]
     (list* '.
-           hostexpr
+           (f hostexpr)
            (if (walkable? mem-or-meth)
              (list* (first mem-or-meth)
                     (doall (map f (rest mem-or-meth))))
