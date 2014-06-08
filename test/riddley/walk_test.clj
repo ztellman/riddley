@@ -87,3 +87,7 @@
 (deftest handle-def-with-docstring
   (is (= '(def x "docstring" (. clojure.lang.Numbers (add 1 2)))
          (r/walk-exprs (constantly false) identity '(def x "docstring" (+ 1 2))))))
+
+(deftest walk-over-instance-expression-in-dot-forms
+  (is (= '(. (. clojure.lang.Numbers (add 1 2)) toString)
+         (r/macroexpand-all '(.toString (+ 1 2))))))
