@@ -62,10 +62,19 @@
 (deftest test-var-evaluation
   (is (= #{#'riddley.walk-test/foo}
          (let [acc (atom #{})]
-           (r/walk-exprs 
-            (constantly false) 
+           (r/walk-exprs
+            (constantly true)
             #(do (swap! acc conj %) %)
-            '(#'riddley.walk-test/foo))
+            '#'riddley.walk-test/foo)
+           @acc))))
+
+(deftest test-doesnt-walk-var-if-not-requested
+  (is (= #{}
+         (let [acc (atom #{})]
+           (r/walk-exprs
+            (constantly false)
+            #(do (swap! acc conj %) %)
+            '#'riddley.walk-test/foo)
            @acc))))
 
 (deftest catch-old-fn*-syntax
