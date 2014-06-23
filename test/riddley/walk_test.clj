@@ -84,6 +84,24 @@
           identity
           '(def p '(fn []))))))
 
+(deftest walk-quotes-if-allowed
+  (is (= #{'(quote (do 1 2 3))}
+         (let [acc (atom #{})]
+           (r/walk-exprs
+            #(and (seq? %) (#{'quote} (first %)))
+            #(do (swap! acc conj %) %)
+            '(quote (do 1 2 3)))
+           @acc))))
+
+(deftest dont-walk-quotes-if-not-allowed
+  (is (= #{}
+         (let [acc (atom #{})]
+           (r/walk-exprs
+            #{'do}
+            #(do (swap! acc conj %) %)
+            '(quote (do 1 2 3)))
+           @acc))))
+
 (deftest handle-def-with-docstring
   (is (= '(def x "docstring" (. clojure.lang.Numbers (add 1 2)))
          (r/walk-exprs (constantly false) identity '(def x "docstring" (+ 1 2))))))
