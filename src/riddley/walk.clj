@@ -198,7 +198,7 @@
              walk-exprs' (partial walk-exprs predicate handler special-form?)
              x' (cond
 
-                  (and (walkable? x) (= 'var (first x)))
+                  (and (walkable? x) (= 'var (first x)) (predicate x))
                   (handler (eval x))
 
                   (and (walkable? x) (= 'quote (first x)))
