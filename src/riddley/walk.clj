@@ -161,7 +161,7 @@
   (let [[_ type var & body] x]
     (cmp/with-lexical-scoping
       (when var
-        (cmp/register-arg (with-meta var {:tag type})))
+        (cmp/register-arg (with-meta var (merge (meta var) {:tag type}))))
       (list* 'catch type var
         (doall (map f body))))))
 
