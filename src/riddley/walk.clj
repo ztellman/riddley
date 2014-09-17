@@ -201,9 +201,9 @@
                   (and (walkable? x) (= 'var (first x)) (predicate x))
                   (handler (eval x))
 
-                  (and (walkable? x) (= 'quote (first x)))
-                  (list* 'quote (walk-exprs predicate handler (constantly true) (rest x)))
-                  
+                  (and (walkable? x) (= 'quote (first x)) (not (predicate x)))
+                  x
+
                   (predicate x)
                   (handler x)
 
