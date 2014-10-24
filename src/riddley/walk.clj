@@ -94,10 +94,10 @@
           [(body-handler remainder)])))))
 
 (defn- def-handler [f x]
-  (let [[_ n form] x]
+  (let [[_ n & r] x]
     (cmp/with-lexical-scoping
       (cmp/register-local n '())
-      (list 'def (f n) (f form)))))
+      (list* 'def (f n) (doall (map f r))))))
 
 (defn- let-bindings [f x]
   (->> x
@@ -166,18 +166,18 @@
   (let [[_ type var & body] x]
     (cmp/with-lexical-scoping
       (when var
-        (cmp/register-arg (with-meta var {:tag type})))
+        (cmp/register-arg (with-meta var (merge (meta var) {:tag type}))))
       (list* 'catch type var
         (doall (map f body))))))
 
 (defn- dot-handler [f x]
   (let [[_ hostexpr mem-or-meth & remainder] x]
     (list* '.
-           hostexpr
+           (f hostexpr)
            (if (walkable? mem-or-meth)
              (list* (first mem-or-meth)
                     (doall (map f (rest mem-or-meth))))
-             mem-or-meth)
+             (f mem-or-meth))
            (doall (map f remainder)))))
 
 (defn walk-exprs
@@ -203,11 +203,11 @@
              walk-exprs' (partial walk-exprs predicate handler special-form?)
              x' (cond
 
-                  (and (walkable? x) (= 'var (first x)))
+                  (and (walkable? x) (= 'var (first x)) (predicate x))
                   (handler (eval x))
 
-                  (and (walkable? x) (= 'quote (first x)))
-                  (list* 'quote (walk-exprs predicate handler (constantly true) (rest x)))
+                  (and (walkable? x) (= 'quote (first x)) (not (predicate x)))
+                  x
 
                   (predicate x)
                   (handler x)

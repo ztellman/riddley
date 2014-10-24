@@ -25,7 +25,7 @@ This means that transforms that we intend to apply to expressions may have unint
 [![Build Status](https://travis-ci.org/ztellman/riddley.png?branch=master)](https://travis-ci.org/ztellman/riddley)
 
 ```clj
-[riddley "0.1.8"]
+[riddley "0.1.9"]
 ```
 
 Riddley provides a correct `riddley.walk/macroexpand-all`, which preserves the binding information in `&env` and expands inlined functions, and `riddley.walk/walk-exprs`, which is a general mechanism for code walking and transformation.

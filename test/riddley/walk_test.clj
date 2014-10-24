@@ -62,10 +62,19 @@
 (deftest test-var-evaluation
   (is (= #{#'riddley.walk-test/foo}
          (let [acc (atom #{})]
-           (r/walk-exprs 
-            (constantly false) 
+           (r/walk-exprs
+            (constantly true)
             #(do (swap! acc conj %) %)
-            '(#'riddley.walk-test/foo))
+            '#'riddley.walk-test/foo)
+           @acc))))
+
+(deftest test-doesnt-walk-var-if-not-requested
+  (is (= #{}
+         (let [acc (atom #{})]
+           (r/walk-exprs
+            (constantly false)
+            #(do (swap! acc conj %) %)
+            '#'riddley.walk-test/foo)
            @acc))))
 
 (deftest catch-old-fn*-syntax
@@ -83,3 +92,29 @@
           (constantly false)
           identity
           '(def p '(fn []))))))
+
+(deftest walk-quotes-if-allowed
+  (is (= #{'(quote (do 1 2 3))}
+         (let [acc (atom #{})]
+           (r/walk-exprs
+            #(and (seq? %) (#{'quote} (first %)))
+            #(do (swap! acc conj %) %)
+            '(quote (do 1 2 3)))
+           @acc))))
+
+(deftest dont-walk-quotes-if-not-allowed
+  (is (= #{}
+         (let [acc (atom #{})]
+           (r/walk-exprs
+            #{'do}
+            #(do (swap! acc conj %) %)
+            '(quote (do 1 2 3)))
+           @acc))))
+
+(deftest handle-def-with-docstring
+  (is (= '(def x "docstring" (. clojure.lang.Numbers (add 1 2)))
+         (r/walk-exprs (constantly false) identity '(def x "docstring" (+ 1 2))))))
+
+(deftest walk-over-instance-expression-in-dot-forms
+  (is (= '(. (. clojure.lang.Numbers (add 1 2)) toString)
+         (r/macroexpand-all '(.toString (+ 1 2))))))
