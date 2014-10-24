@@ -23,14 +23,14 @@
            (if (or
                  (and special-form? (special-form? frst))
                  (contains? (cmp/locals) frst))
-             
+
              ;; might look like a macro, but for our purposes it isn't
              x
-             
+
              (let [x' (macroexpand-1 x)]
                (if-not (identical? x x')
                  (macroexpand x' special-form?)
-                 
+
                  ;; if we can't macroexpand any further, check if it's an inlined function
                  (if-let [inline-fn (and (seq? x')
                                       (symbol? (first x'))
@@ -44,7 +44,7 @@
                      (macroexpand
                        ;; unfortunately, static function calls can look a lot like what we just
                        ;; expanded, so prevent infinite expansion
-                       (if (= '. (first x''))         
+                       (if (= '. (first x''))
                          (with-meta
                            (concat (butlast x'')
                              [(if (instance? clojure.lang.IObj (last x''))
@@ -60,6 +60,11 @@
          x))))
 
 ;;;
+
+(defn- do-handler [f [_ & body]]
+  (list* 'do
+    (doall
+      (map f body))))
 
 (defn- fn-handler [f x]
   (let [prelude (take-while (complement sequential?) x)
@@ -81,7 +86,7 @@
         (cmp/register-local nm
           (list* 'fn* nm
             (map #(take 1 %) remainder))))
-    
+
       (concat
         prelude
         (if (seq? (first remainder))
@@ -203,12 +208,13 @@
 
                   (and (walkable? x) (= 'quote (first x)))
                   (list* 'quote (walk-exprs predicate handler (constantly true) (rest x)))
-                  
+
                   (predicate x)
                   (handler x)
 
                   (walkable? x)
                   ((condp = (first x)
+                     'do     do-handler
                      'def    def-handler
                      'fn*    fn-handler
                      'let*   let-handler
@@ -221,28 +227,28 @@
                      '.      dot-handler
                      #(doall (map %1 %2)))
                    walk-exprs' x)
-                  
+
                   (instance? java.util.Map$Entry x)
                   (clojure.lang.MapEntry.
                     (walk-exprs' (key x))
                     (walk-exprs' (val x)))
-                  
+
                   (vector? x)
                   (vec (map walk-exprs' x))
 
                   (instance? clojure.lang.IRecord x)
                   x
-                  
+
                   (map? x)
                   (into {} (map walk-exprs' x))
-                  
+
                   (set? x)
                   (set (map walk-exprs' x))
 
                   ;; special case to handle clojure.test
                   (and (symbol? x) (-> x meta :test))
                   (vary-meta x update-in [:test] walk-exprs')
-                  
+
                   :else
                   x)]
          (if (instance? clojure.lang.IObj x')
