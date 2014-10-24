@@ -172,7 +172,7 @@
            (if (walkable? mem-or-meth)
              (list* (first mem-or-meth)
                     (doall (map f (rest mem-or-meth))))
-             mem-or-meth)
+             (f mem-or-meth))
            (doall (map f remainder)))))
 
 (defn walk-exprs
