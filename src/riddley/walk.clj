@@ -3,12 +3,6 @@
   (:require
     [riddley.compiler :as cmp]))
 
-(defn- walkable? [x]
-  (and
-    (sequential? x)
-    (not (vector? x))
-    (not (instance? java.util.Map$Entry x))))
-
 (defn macroexpand
   "Expands both macros and inline functions. Optionally takes a `special-form?` predicate which
    identifies first elements of expressions that shouldn't be macroexpanded, and honors local
@@ -174,7 +168,7 @@
   (let [[_ hostexpr mem-or-meth & remainder] x]
     (list* '.
            (f hostexpr)
-           (if (walkable? mem-or-meth)
+           (if (seq? mem-or-meth)
              (list* (first mem-or-meth)
                     (doall (map f (rest mem-or-meth))))
              (f mem-or-meth))
@@ -203,16 +197,16 @@
              walk-exprs' (partial walk-exprs predicate handler special-form?)
              x' (cond
 
-                  (and (walkable? x) (= 'var (first x)) (predicate x))
+                  (and (seq? x) (= 'var (first x)) (predicate x))
                   (handler (eval x))
 
-                  (and (walkable? x) (= 'quote (first x)) (not (predicate x)))
+                  (and (seq? x) (= 'quote (first x)) (not (predicate x)))
                   x
 
                   (predicate x)
                   (handler x)
 
-                  (walkable? x)
+                  (seq? x)
                   ((condp = (first x)
                      'do     do-handler
                      'def    def-handler
@@ -233,17 +227,16 @@
                     (walk-exprs' (key x))
                     (walk-exprs' (val x)))
 
-                  (vector? x)
-                  (vec (map walk-exprs' x))
+                  (or
+                    (set? x)
+                    (vector? x))
+                  (into (empty x) (map walk-exprs' x))
 
                   (instance? clojure.lang.IRecord x)
                   x
 
                   (map? x)
-                  (into {} (map walk-exprs' x))
-
-                  (set? x)
-                  (set (map walk-exprs' x))
+                  (into (empty x) (map walk-exprs' x))
 
                   ;; special case to handle clojure.test
                   (and (symbol? x) (-> x meta :test))
