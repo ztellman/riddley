@@ -224,7 +224,8 @@
 
                   (and
                     (instance? java.util.Map$Entry x)
-                    ; vectors of length 2
+                    ; In Clojure 1.8 all vectors implement Map$Entry but only
+                    ; vectors of length 2 should be treated as MapEntries.
                     (if (instance? clojure.lang.APersistentVector x)
                       (= (count x) 2)
                       true))
