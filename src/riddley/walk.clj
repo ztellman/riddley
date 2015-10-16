@@ -222,7 +222,12 @@
                      #(doall (map %1 %2)))
                    walk-exprs' x)
 
-                  (instance? java.util.Map$Entry x)
+                  (and
+                    (instance? java.util.Map$Entry x)
+                    ; vectors of length 2
+                    (if (instance? clojure.lang.APersistentVector x)
+                      (= (count x) 2)
+                      true))
                   (clojure.lang.MapEntry.
                     (walk-exprs' (key x))
                     (walk-exprs' (val x)))
