@@ -86,6 +86,10 @@
   (is (= (r/macroexpand-all '(bit-and 2 1))
          '(. clojure.lang.Numbers (and 2 1)))))
 
+(deftest vector-expansion
+  (is (= (r/macroexpand-all [])
+         [])))
+
 (deftest do-not-macroexpand-quoted-things
   (is (= '(def p '(fn []))
         (r/walk-exprs

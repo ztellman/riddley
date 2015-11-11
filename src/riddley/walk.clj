@@ -222,15 +222,15 @@
                      #(doall (map %1 %2)))
                    walk-exprs' x)
 
-                  (instance? java.util.Map$Entry x)
-                  (clojure.lang.MapEntry.
-                    (walk-exprs' (key x))
-                    (walk-exprs' (val x)))
-
                   (or
                     (set? x)
                     (vector? x))
                   (into (empty x) (map walk-exprs' x))
+
+                  (instance? java.util.Map$Entry x)
+                  (clojure.lang.MapEntry.
+                    (walk-exprs' (key x))
+                    (walk-exprs' (val x)))
 
                   (instance? clojure.lang.IRecord x)
                   x
