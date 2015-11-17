@@ -1,40 +1,40 @@
 <html lang="en">
   <head>
     <title>riddley.walk documentation</title>
-    <link href="css/default.css" type="text/css" rel="stylesheet" />
-    <link href="css/codox-md.css" type="text/css" rel="stylesheet" />
-    <script type="text/javascript" src="js/jquery.min.js"></script>
-    <script type="text/javascript" src="js/page_effects.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/default.css" />
+    <link rel="stylesheet" type="text/css" href="css/codox-md.css" />
+    <script src="js/jquery.min.js" type="text/javascript"></script>
+    <script src="js/page_effects.js" type="text/javascript"></script>
   </head>
   <body>
     <header>
       <div id="header">
-        <h1 class="project-title">Riddley 0.1.10 API documentation</h1>
+        <h1 class="project-title">Riddley 0.1.11 API documentation</h1>
       </div>
     </header>
     <navigation>
-      <div id="namespaces" class="sidebar">
+      <div class="sidebar" id="namespaces">
         <h3>Namespaces</h3>
         <ul class="ns-links">
-          <li class="ns-list"><a class="ns-link ns-name" href="riddley.compiler.html">riddley.compiler</a></li><li class="ns-list"><a class="ns-link ns-name" href="riddley.walk.html">riddley.walk</a></li>
+          <li class="ns-list"><a href="riddley.compiler.html" class="ns-link ns-name">riddley.compiler</a></li><li class="ns-list"><a href="riddley.walk.html" class="ns-link ns-name">riddley.walk</a></li>
         </ul>
       </div>
-      <div id="vars" class="sidebar">
+      <div class="sidebar" id="vars">
         <h3>Public Vars</h3>
         <ul class="ns-var-links">
-          <li class="ns-var-list"><a class="ns-var-link ns-var-name" href="riddley.walk.html#var-macroexpand">macroexpand</a></li><li class="ns-var-list"><a class="ns-var-link ns-var-name" href="riddley.walk.html#var-macroexpand-all">macroexpand-all</a></li><li class="ns-var-list"><a class="ns-var-link ns-var-name" href="riddley.walk.html#var-walk-exprs">walk-exprs</a></li>
+          <li class="ns-var-list"><a href="riddley.walk.html#var-macroexpand" class="ns-var-link ns-var-name">macroexpand</a></li><li class="ns-var-list"><a href="riddley.walk.html#var-macroexpand-all" class="ns-var-link ns-var-name">macroexpand-all</a></li><li class="ns-var-list"><a href="riddley.walk.html#var-walk-exprs" class="ns-var-link ns-var-name">walk-exprs</a></li>
         </ul>
       </div>
     </navigation>
     <article>
-      <div id="content" class="namespace-docs">
+      <div class="namespace-docs" id="content">
         <h2 class="namespace-title">riddley.walk documentation</h2>
         <div class="doc">
 </div>
         <div class="ns-vars">
           <div class="public">
-            <h3><a id="var-macroexpand" class="source var-name" href="/src/riddley/walk.clj">macroexpand</a></h3>
-            <h4 class="var-type fn" id="var-type">fn</h4>
+            <h3><a href="/src/riddley/walk.clj" class="source var-name" id="var-macroexpand">macroexpand</a></h3>
+            <h4 id="var-type" class="var-type fn">fn</h4>
             <div class="usage">[x]</div><div class="usage">[x special-form?]</div>
             
             
@@ -43,16 +43,16 @@ identifies first elements of expressions that shouldn't be macroexpanded, and ho
 bindings.</p>
 </div>
           </div><div class="public">
-            <h3><a id="var-macroexpand-all" class="source var-name" href="/src/riddley/walk.clj">macroexpand-all</a></h3>
-            <h4 class="var-type fn" id="var-type">fn</h4>
+            <h3><a href="/src/riddley/walk.clj" class="source var-name" id="var-macroexpand-all">macroexpand-all</a></h3>
+            <h4 id="var-type" class="var-type fn">fn</h4>
             <div class="usage">[x]</div>
             
             
             <div class="doc"><p>Recursively macroexpands all forms, preserving the &amp;env special variables.</p>
 </div>
           </div><div class="public">
-            <h3><a id="var-walk-exprs" class="source var-name" href="/src/riddley/walk.clj">walk-exprs</a></h3>
-            <h4 class="var-type fn" id="var-type">fn</h4>
+            <h3><a href="/src/riddley/walk.clj" class="source var-name" id="var-walk-exprs">walk-exprs</a></h3>
+            <h4 id="var-type" class="var-type fn">fn</h4>
             <div class="usage">[predicate handler x]</div><div class="usage">[predicate handler special-form? x]</div>
             
             
