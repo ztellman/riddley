@@ -174,10 +174,6 @@
              (f mem-or-meth))
            (doall (map f remainder)))))
 
-(def pre-clojure-1-8-0?
-  (let [{:keys [major minor]} *clojure-version*]
-    (or (< major 1) (and (= major 1) (< minor 8)))))
-
 (defn walk-exprs
   "A walk function which only traverses valid Clojure expressions.  The `predicate` describes
    whether the sub-form should be transformed.  If it returns true, `handler` is invoked, and
@@ -226,7 +222,7 @@
                      #(doall (map %1 %2)))
                    walk-exprs' x)
 
-                  (and pre-clojure-1-8-0? (instance? java.util.Map$Entry x))
+                  (instance? java.util.Map$Entry x)
                   (clojure.lang.MapEntry.
                     (walk-exprs' (key x))
                     (walk-exprs' (val x)))
