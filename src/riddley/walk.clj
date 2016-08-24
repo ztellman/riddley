@@ -34,7 +34,7 @@
                                         ((-> x' first resolve meta :inline-arities)
                                          (count (rest x'))))
                                       (-> x' first resolve meta :inline))]
-                   (let [x'' (apply inline-fn (rest x'))]
+                   (let [x'' (with-meta (apply inline-fn (rest x')) (meta x'))]
                      (macroexpand
                        ;; unfortunately, static function calls can look a lot like what we just
                        ;; expanded, so prevent infinite expansion
