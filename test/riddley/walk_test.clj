@@ -118,3 +118,8 @@
 (deftest walk-over-instance-expression-in-dot-forms
   (is (= '(. (. clojure.lang.Numbers (add 1 2)) toString)
          (r/macroexpand-all '(.toString (+ 1 2))))))
+
+
+(deftest meta-data-on-inline-function-macro-expasion
+  (is (= {:foo :bar}
+         (meta (r/macroexpand (with-meta '(+ 1 1) {:foo :bar}))))))
