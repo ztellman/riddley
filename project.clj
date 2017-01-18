@@ -1,12 +1,14 @@
-(defproject riddley "0.1.12"
+(defproject riddley "0.1.13"
   :description "code-walking without caveats"
   :license {:name "MIT License"
             :url "http://opensource.org/licenses/MIT"}
   :dependencies []
-  :plugins [[codox "0.6.4"]]
-  :codox {:writer codox-md.writer/write-docs
-          :include [riddley.walk riddley.compiler]}
-  :profiles {:dev {:dependencies [[codox-md "0.2.0" :exclusions [org.clojure/clojure]]]}
-             :provided {:dependencies [[org.clojure/clojure "1.8.0-RC4"]]}}
+  :plugins [[lein-codox "0.9.4"]]
+  :codox {:src-dir-uri "https://github.com/ztellman/riddley/tree/master/"
+          :src-linenum-anchor-prefix "L"
+          :defaults {:doc/format :markdown}
+          :include [riddley.walk riddley.compiler]
+          :output-dir "doc"}
+  :profiles {:provided {:dependencies [[org.clojure/clojure "1.8.0"]]}}
   :java-source-paths ["src/riddley"]
-  :javac-options ["-target" "1.5" "-source" "1.5"])
+  :javac-options ["-target" "1.6" "-source" "1.6"])

@@ -138,15 +138,13 @@
         (let-bindings f (second x))
         (map f (drop 2 x))))))
 
-(defn- case-handler [f x]
-  (let [prefix (butlast (take-while (complement map?) x))
-        default (last (take-while (complement map?) x))
-        body (first (drop-while (complement map?) x))
-        suffix (rest (drop-while (complement map?) x))]
+(defn- case-handler [f [_ ge shift mask default imap switch-type check-type skip-check]]
+  (let [prefix  ['case* ge shift mask]
+        suffix  [switch-type check-type skip-check]]
     (concat
       prefix
       [(f default)]
-      [(let [m (->> body
+      [(let [m (->> imap
                  (map
                    (fn [[k [idx form]]]
                      [k [idx (f form)]]))
