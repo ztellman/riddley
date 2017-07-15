@@ -77,6 +77,18 @@
             '#'riddley.walk-test/foo)
            @acc))))
 
+(deftest try-catch-finally-locals
+  (is (= '(let* [catch inc, finally dec, throw +]
+            (try (throw (catch 100) (finally 200))
+                 (catch Exception e)
+                 (finally nil)))
+
+         (r/walk-exprs (constantly false) identity
+           '(let [catch inc, finally dec, throw +]
+             (try (throw (catch 100) (finally 200))
+                  (catch Exception e)
+                  (finally nil)))))))
+
 (deftest catch-old-fn*-syntax
   (is (= (r/walk-exprs (constantly false) identity
                        '(fn* tst [x seq]))
