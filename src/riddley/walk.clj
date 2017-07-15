@@ -205,20 +205,22 @@
                   (handler x)
 
                   (seq? x)
-                  ((condp = (first x)
-                     'do     do-handler
-                     'def    def-handler
-                     'fn*    fn-handler
-                     'let*   let-handler
-                     'loop*  let-handler
-                     'letfn* let-handler
-                     'case*  case-handler
-                     'catch  catch-handler
-                     'reify* reify-handler
-                     'deftype* deftype-handler
-                     '.      dot-handler
-                     #(doall (map %1 %2)))
-                   walk-exprs' x)
+                  (if (contains? (cmp/locals) (first x))
+                    (doall (map walk-exprs' x))
+                    ((condp = (first x)
+                       'do     do-handler
+                       'def    def-handler
+                       'fn*    fn-handler
+                       'let*   let-handler
+                       'loop*  let-handler
+                       'letfn* let-handler
+                       'case*  case-handler
+                       'catch  catch-handler
+                       'reify* reify-handler
+                       'deftype* deftype-handler
+                       '.      dot-handler
+                       #(doall (map %1 %2)))
+                     walk-exprs' x))
 
                   (instance? java.util.Map$Entry x)
                   (clojure.lang.MapEntry.
