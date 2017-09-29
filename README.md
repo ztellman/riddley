@@ -39,7 +39,7 @@ Notice that `walk-exprs` implicitly macroexpands the form, including the inline 
 
 Access to `&env` is available via `(riddley.compiler/locals)` if you need it as part of your transformation.
 
-Full documentation can be found [here](http://ideolalia.com/riddley/).
+Full documentation can be found [here](http://aleph.io/codox/riddley/).
 
 ### license
 
