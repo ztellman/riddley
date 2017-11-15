@@ -16,7 +16,7 @@ Code may be data, but only some of that data is executable.  If we want to perfo
 * `clojure.walk/macroexpand-all` will pass in a nil `&env` to all macros
 * macroexpansion doesn't expand inlined functions
 
-This means that transforms that we intend to apply to expressions may have unintended consequences on a `fn`, `let`, or `case` form.  It also means that any macro which relies on `&env` will not compose with our transformation.  Finally, if inlined functions aren't expanded, this can break certain transformations.
+This means that transforms that we intend to apply to expressions may have unintended consequences on a `fn`, `let`, or `case` form.  It also means that any macro which relies on `&env` will not compose with our transformation.  Finally, if inlined functions aren't expanded, certain transformations will break.
 
 ### usage
 
