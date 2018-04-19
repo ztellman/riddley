@@ -190,7 +190,7 @@
      (cmp/with-base-env
        (let [x (try
                  (macroexpand x special-form?)
-                 (catch ClassNotFoundException _
+                 (catch #?(:clj ClassNotFoundException :cljr TypeLoadException) _
                    x))
              walk-exprs' (partial walk-exprs predicate handler special-form?)
              x' (cond
@@ -222,10 +222,10 @@
                        #(doall (map %1 %2)))
                      walk-exprs' x))
 
-                  (instance? java.util.Map$Entry x)
-                  (clojure.lang.MapEntry.
-                    (walk-exprs' (key x))
-                    (walk-exprs' (val x)))
+                  #?@(:clj [(instance? java.util.Map$Entry x)
+                            (clojure.lang.MapEntry.
+                              (walk-exprs' (key x))
+                              (walk-exprs' (val x)))])
 
                   (or
                     (set? x)
