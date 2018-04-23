@@ -6,14 +6,14 @@ namespace Riddley
 {
     public static class Util
     {
-		public static LocalBinding LocalBinding(int num, Symbol sym, Symbol tag, Object form)
+		public static LocalBinding LocalBinding(int num, Symbol sym, Symbol tag, object form)
 		{
-			return new LocalBinding(num, sym, tag, Compiler.Analyze(new ParserContext(RHC.Expression), form), typeof(Object), false, false, false);
+			return new LocalBinding(num, sym, tag, Compiler.Analyze(new ParserContext(RHC.Expression), form), typeof(object), false, false, false);
 		}
 
 		public static LocalBinding LocalArgument(int num, Symbol sym, Symbol tag)
         {
-			return new LocalBinding(num, sym, tag, null, typeof(Object), false, true, false);
+			return new LocalBinding(num, sym, tag, null, typeof(object), false, true, false);
         }
     }
 
@@ -24,16 +24,34 @@ namespace Riddley
 			
 		}
 
-		public override bool IsVariadic => throw new NotImplementedException();
+		public override bool IsVariadic
+		{
+			get { throw new NotImplementedException(); }
+		}
 
-		public override int NumParams => throw new NotImplementedException();
+		public override int NumParams
+		{
+			get { throw new NotImplementedException(); }
+		}
 
-		public override int RequiredArity => throw new NotImplementedException();
+		public override int RequiredArity
+		{
+			get { throw new NotImplementedException(); }
+		}
 
-		public override string MethodName => throw new NotImplementedException();
+		public override string MethodName
+		{
+			get { throw new NotImplementedException(); }
+		}
 
-		public override Type ReturnType => throw new NotImplementedException();
+		public override Type ReturnType
+		{
+			get { throw new NotImplementedException(); }
+		}
 
-		public override Type[] ArgTypes => throw new NotImplementedException();
+		public override Type[] ArgTypes
+		{
+			get { throw new NotImplementedException(); }
+		}
 	}
 }
