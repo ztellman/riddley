@@ -55,6 +55,12 @@
 
 ;;;
 
+(def ^:private special-forms
+  (into #{} (keys (. clojure.lang.Compiler specials))))
+
+(defn- special-meta [[op & body]]
+  (list* (vary-meta op assoc ::special true) body))
+
 (defn- do-handler [f [_ & body]]
   (list* 'do
     (doall
@@ -93,15 +99,17 @@
       (cmp/register-local n '())
       (list* 'def (f n) (doall (map f r))))))
 
-(defn- let-bindings [f x]
-  (->> x
-    (partition-all 2)
-    (mapcat
-      (fn [[k v]]
-        (let [[k v] [k (f v)]]
-          (cmp/register-local k v)
-          [k v])))
-    vec))
+(defn- let-bindings [f x recursive?]
+  (let [pairs (partition-all 2 x)]
+    (when recursive?
+      (doall (map (fn [[k v]] (cmp/register-local k nil)) pairs)))
+    (->> pairs
+         (mapcat
+           (fn [[k v]]
+             (let [[k v] [k (f v)]]
+               (cmp/register-local k v)
+               [k v])))
+         vec)))
 
 (defn- reify-handler [f x]
   (let [[_ classes & fns] x]
@@ -130,13 +138,19 @@
                 (list* nm args (doall (map f body)))))
             fns))))))
 
-(defn- let-handler [f x]
-  (cmp/with-lexical-scoping
-    (doall
-      (list*
-        (first x)
-        (let-bindings f (second x))
-        (map f (drop 2 x))))))
+(defn- let-handler
+  ([f x]
+   (let-handler f x nil))
+  ([f x recursive?]
+   (cmp/with-lexical-scoping
+     (doall
+       (list*
+         (first x)
+         (let-bindings f (second x) recursive?)
+         (map f (drop 2 x)))))))
+
+(defn- letfn-handler [f x]
+  (let-handler f x true))
 
 (defn- case-handler [f [_ ge shift mask default imap switch-type check-type skip-check]]
   (let [prefix  ['case* ge shift mask]
@@ -162,6 +176,10 @@
       (list* 'catch type var
         (doall (map f body))))))
 
+(defn- try-handler [f x]
+  (let [[_ & body] x]
+    (list* 'try (doall (map #(f % :try-clause? true) body)))))
+
 (defn- dot-handler [f x]
   (let [[_ hostexpr mem-or-meth & remainder] x]
     (list* '.
@@ -183,10 +201,13 @@
 
    Macroexpansion can be halted by defining a set of `special-form?` which will be left alone.
    Including `fn`, `let`, or other binding forms can break local variable analysis, so use
-   with caution."
+   with caution.
+
+   The :try-clause? option indicates that a `try` clause is being walked. The special forms
+   `catch` and `finally` are only special in `try` clauses."
   ([predicate handler x]
      (walk-exprs predicate handler nil x))
-  ([predicate handler special-form? x]
+  ([predicate handler special-form? x & {:keys [try-clause?]}]
      (cmp/with-base-env
        (let [x (try
                  (macroexpand x special-form?)
@@ -205,22 +226,25 @@
                   (handler x)
 
                   (seq? x)
-                  (if (contains? (cmp/locals) (first x))
+                  (if (or (and (not try-clause?)
+                               (#{'catch 'finally} (first x)))
+                          (not (contains? special-forms (first x))))
                     (doall (map walk-exprs' x))
                     ((condp = (first x)
-                       'do     do-handler
-                       'def    def-handler
-                       'fn*    fn-handler
-                       'let*   let-handler
-                       'loop*  let-handler
-                       'letfn* let-handler
-                       'case*  case-handler
-                       'catch  catch-handler
-                       'reify* reify-handler
-                       'deftype* deftype-handler
-                       '.      dot-handler
+                       'do        do-handler
+                       'def       def-handler
+                       'fn*       fn-handler
+                       'let*      let-handler
+                       'loop*     let-handler
+                       'letfn*    letfn-handler
+                       'case*     case-handler
+                       'try       try-handler
+                       'catch     catch-handler
+                       'reify*    reify-handler
+                       'deftype*  deftype-handler
+                       '.         dot-handler
                        #(doall (map %1 %2)))
-                     walk-exprs' x))
+                     walk-exprs' (special-meta x)))
 
                   (instance? java.util.Map$Entry x)
                   (clojure.lang.MapEntry.
@@ -254,3 +278,8 @@
   "Recursively macroexpands all forms, preserving the &env special variables."
   [x]
   (walk-exprs (constantly false) nil x))
+
+(defn special-form?
+  "Given sym, a symbol produced by walk-exprs, returns true if sym is a special form."
+  [x]
+  (when (symbol? x) (::special (meta x))))

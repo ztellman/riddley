@@ -1,6 +1,7 @@
 (ns riddley.walk-test
   (:require
     [clojure.test :refer :all]
+    [riddley.compiler :as c]
     [riddley.walk :as r]))
 
 (defmacro inc-numbers [& body]
@@ -8,6 +9,24 @@
     number?
     inc
     `(do ~@body)))
+
+(defmacro external-references [expr]
+  (let [log (atom #{})]
+    (r/walk-exprs
+      symbol?
+      (fn [x]
+        (when (or (contains? &env x)
+                  (not (contains? (c/locals) x)))
+          (swap! log conj x))
+        x)
+      expr)
+    (list 'quote @log)))
+
+(defmacro identify-special-forms [expr]
+  (list 'quote (r/walk-exprs
+                 symbol?
+                 (comp boolean r/special-form?)
+                 expr)))
 
 (defrecord Test [x])
 
@@ -88,6 +107,32 @@
              (try (throw (catch 100) (finally 200))
                   (catch Exception e)
                   (finally nil)))))))
+
+(deftest try-catch-finally-locals-in-env
+  (let [catch inc, finally dec, throw +]
+    (is (= nil ((external-references
+                  (try (throw (catch 100) (finally 200))
+                       (catch Exception e)
+                       (finally nil)))
+                'e)))))
+
+(deftest letfn-binds-locals-recursively
+  (is (= nil ((external-references
+                (letfn [(f1 [x] (inc (f2 x)))
+                        (f2 [x] (* x 100))]
+                  (f1 (f2 100))))
+              'f2))))
+
+(deftest special-forms-identified
+  (is (= (identify-special-forms
+           (let* [catch inc, finally dec, throw +]
+             (try (throw (catch 100) (finally 200))
+                  (catch Exception e)
+                  (finally nil))))
+         '(let* [catch false, finally false, throw false]
+            (try (true (false 100) (false 200))
+                 (catch Exception e)
+                 (true nil))))))
 
 (deftest catch-old-fn*-syntax
   (is (= (r/walk-exprs (constantly false) identity
