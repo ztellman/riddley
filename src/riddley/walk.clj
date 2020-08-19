@@ -1,57 +1,101 @@
 (ns riddley.walk
   (:refer-clojure :exclude [macroexpand])
   (:require
-    [riddley.compiler :as cmp]))
+   [riddley.compiler :as cmp]))
+
+(declare macroexpand)
+
+(defn merge-meta
+  "If `form` can have metadata, merge other `metadatas` into its metadata. Keys in `form`'s metadata are preferred over
+  those in `metadatas`.
+
+    (meta (merge-meta {} {:a 1}))                          ;-> {:a 1}
+    (meta (merge-meta nil {:a 1}))                         ;-> nil
+    (meta (merge-meta (with-meta {} {:a 2}) {:a 1, :b 1})) ;-> {:a 2, :b 1}"
+  [form & metadatas]
+  (cond-> form
+    (instance? clojure.lang.IObj form) (vary-meta (apply partial merge metadatas))))
+
+(defn- head=
+  "True if `form` is list-like and the first element is `x`.
+
+    (head= '(a b c) 'a) ;-> true"
+  [form x]
+  (and (seq? form)
+       (= (first form) x)))
+
+(defn inline-fn
+  "If `form` represents a call to a function that will be replaced with an inlined version by the compiler, returns the
+  `:inline` function used to create the replacement form; otherwise returns `nil`.
+
+    (inline-fn '(+ 1 2)) ; -> #function[clojure.core/nary-inline/fn--5541]
+    (inline-fn '(+ 1 2)) ; -> nil"
+  [form]
+  (when (and (seq? form)
+             (not (::transformed (meta form))))
+    (let [[fn-symbol & args] form]
+      (when (symbol? fn-symbol)
+        ;; a function is inlineable if it has an `:inline` function in its metadata, and, if it has an
+        ;; `:inline-arities` function in its metadata, returns truthy when passed the number of args in this form
+        (let [{:keys [inline inline-arities]} (meta (resolve fn-symbol))]
+          (when (and inline
+                     (or (not inline-arities)
+                         (inline-arities (count args))))
+            inline))))))
+
+(defn expand-inline-fn
+  "Expand an inline function call `form` into the inlined version."
+  ([form]
+   (expand-inline-fn form nil))
+
+  ([form special-form?]
+   (let [inline-fn (or (inline-fn form)
+                       (throw (ex-info "Form is not an inlineable function call." {:form form})))
+         expanded  (with-meta (apply inline-fn (rest form)) (meta form))]
+     (macroexpand
+      ;; unfortunately, static function calls can look a lot like what we just
+      ;; expanded, so prevent infinite expansion
+      (if (head= expanded '.)
+        (with-meta
+          (concat (butlast expanded) [(merge-meta (last expanded) {::transformed true})])
+          (meta expanded))
+        expanded)
+      special-form?))))
+
+(defn- expand-list-like
+  "Expand a list-like `form`."
+  ([form]
+   (expand-list-like form nil))
+
+  ([[head :as form] special-form?]
+   (if (or (and special-form? (special-form? head))
+           (contains? (cmp/locals) head))
+     ;; might look like a macro, but for our purposes it isn't
+     form
+     ;; otherwise attempt to macroexpand
+     (let [expanded (macroexpand-1 form)]
+       (cond
+         (not (identical? form expanded))
+         (macroexpand expanded special-form?)
+
+         ;; if we can't macroexpand any further, check if it's an inlined function
+         (inline-fn expanded)
+         (expand-inline-fn expanded special-form?)
+
+         :else
+         form)))))
 
 (defn macroexpand
-  "Expands both macros and inline functions. Optionally takes a `special-form?` predicate which
-   identifies first elements of expressions that shouldn't be macroexpanded, and honors local
-   bindings."
-  ([x]
-     (macroexpand x nil))
-  ([x special-form?]
-     (cmp/with-base-env
-       (if (seq? x)
-         (let [frst (first x)]
+  "Expands both macros and inline functions. Optionally takes a `special-form?` predicate which identifies first
+  elements of expressions that shouldn't be macroexpanded, and honors local bindings."
+  ([form]
+   (macroexpand form nil))
 
-           (if (or
-                 (and special-form? (special-form? frst))
-                 (contains? (cmp/locals) frst))
-
-             ;; might look like a macro, but for our purposes it isn't
-             x
-
-             (let [x' (macroexpand-1 x)]
-               (if-not (identical? x x')
-                 (macroexpand x' special-form?)
-
-                 ;; if we can't macroexpand any further, check if it's an inlined function
-                 (if-let [inline-fn (and (seq? x')
-                                      (symbol? (first x'))
-                                      (-> x' meta ::transformed not)
-                                      (or
-                                        (-> x' first resolve meta :inline-arities not)
-                                        ((-> x' first resolve meta :inline-arities)
-                                         (count (rest x'))))
-                                      (-> x' first resolve meta :inline))]
-                   (let [x'' (with-meta (apply inline-fn (rest x')) (meta x'))]
-                     (macroexpand
-                       ;; unfortunately, static function calls can look a lot like what we just
-                       ;; expanded, so prevent infinite expansion
-                       (if (= '. (first x''))
-                         (with-meta
-                           (concat (butlast x'')
-                             [(if (instance? clojure.lang.IObj (last x''))
-                                (with-meta (last x'')
-                                  (merge
-                                    (meta (last x''))
-                                    {::transformed true}))
-                                (last x''))])
-                           (meta x''))
-                         x'')
-                       special-form?))
-                   x')))))
-         x))))
+  ([form special-form?]
+   (cmp/with-base-env
+     (if-not (seq? form)
+       form
+       (expand-list-like form special-form?)))))
 
 ;;;
 
@@ -172,7 +216,7 @@
   (let [[_ type var & body] x]
     (cmp/with-lexical-scoping
       (when var
-        (cmp/register-arg (with-meta var (merge (meta var) {:tag type}))))
+        (cmp/register-arg (vary-meta var assoc :tag type)))
       (list* 'catch type var
         (doall (map f body))))))
 
@@ -180,15 +224,23 @@
   (let [[_ & body] x]
     (list* 'try (doall (map #(f % :try-clause? true) body)))))
 
-(defn- dot-handler [f x]
-  (let [[_ hostexpr mem-or-meth & remainder] x]
-    (list* '.
-           (f hostexpr)
-           (if (seq? mem-or-meth)
-             (list* (first mem-or-meth)
-                    (doall (map f (rest mem-or-meth))))
-             (f mem-or-meth))
-           (doall (map f remainder)))))
+(defn- dot-handler
+  "Handle java interop forms."
+  [f [_ class-or-instance & more]]
+  ;; form is either of the syntax
+  ;;
+  ;; (. class-or-instance method & args)
+  ;; or
+  ;; (. class-or-instance (method & args))
+  ;;
+  ;; both syntaxes are possible and equivalent
+  (if (seq? (first more))
+    ;; (. class-or-instance (method & args))
+    (let [[[method & args]] more]
+      (list '. (f class-or-instance) (cons method (doall (map f args)))))
+    ;; (. class-or-instance method & args)
+    (let [[method & args] more]
+      (list* '. (f class-or-instance) method (doall (map f args))))))
 
 (defn walk-exprs
   "A walk function which only traverses valid Clojure expressions.  The `predicate` describes
@@ -206,71 +258,70 @@
    The :try-clause? option indicates that a `try` clause is being walked. The special forms
    `catch` and `finally` are only special in `try` clauses."
   ([predicate handler x]
-     (walk-exprs predicate handler nil x))
+   (walk-exprs predicate handler nil x))
+
   ([predicate handler special-form? x & {:keys [try-clause?]}]
-     (cmp/with-base-env
-       (let [x (try
-                 (macroexpand x special-form?)
-                 (catch ClassNotFoundException _
-                   x))
-             walk-exprs' (partial walk-exprs predicate handler special-form?)
-             x' (cond
+   (cmp/with-base-env
+     (let [x (try
+               (macroexpand x special-form?)
+               (catch ClassNotFoundException _
+                 x))
+           walk-exprs' (partial walk-exprs predicate handler special-form?)
+           x' (cond
 
-                  (and (seq? x) (= 'var (first x)) (predicate x))
-                  (handler (eval x))
+                (and (head= x 'var) (predicate x))
+                (handler (eval x))
 
-                  (and (seq? x) (= 'quote (first x)) (not (predicate x)))
-                  x
+                (and (head= x 'quote)  (not (predicate x)))
+                x
 
-                  (predicate x)
-                  (handler x)
+                (predicate x)
+                (handler x)
 
-                  (seq? x)
-                  (if (or (and (not try-clause?)
-                               (#{'catch 'finally} (first x)))
-                          (not (contains? special-forms (first x))))
-                    (doall (map walk-exprs' x))
-                    ((condp = (first x)
-                       'do        do-handler
-                       'def       def-handler
-                       'fn*       fn-handler
-                       'let*      let-handler
-                       'loop*     let-handler
-                       'letfn*    letfn-handler
-                       'case*     case-handler
-                       'try       try-handler
-                       'catch     catch-handler
-                       'reify*    reify-handler
-                       'deftype*  deftype-handler
-                       '.         dot-handler
-                       #(doall (map %1 %2)))
-                     walk-exprs' (special-meta x)))
+                (seq? x)
+                (if (or (and (not try-clause?)
+                             (#{'catch 'finally} (first x)))
+                        (not (contains? special-forms (first x))))
+                  (doall (map walk-exprs' x))
+                  ((condp = (first x)
+                     'do        do-handler
+                     'def       def-handler
+                     'fn*       fn-handler
+                     'let*      let-handler
+                     'loop*     let-handler
+                     'letfn*    letfn-handler
+                     'case*     case-handler
+                     'try       try-handler
+                     'catch     catch-handler
+                     'reify*    reify-handler
+                     'deftype*  deftype-handler
+                     '.         dot-handler
+                     #(doall (map %1 %2)))
+                   walk-exprs' (special-meta x)))
 
-                  (instance? java.util.Map$Entry x)
-                  (clojure.lang.MapEntry.
-                    (walk-exprs' (key x))
-                    (walk-exprs' (val x)))
+                (instance? java.util.Map$Entry x)
+                (clojure.lang.MapEntry.
+                 (walk-exprs' (key x))
+                 (walk-exprs' (val x)))
 
-                  (or
-                    (set? x)
-                    (vector? x))
-                  (into (empty x) (map walk-exprs' x))
+                (or
+                 (set? x)
+                 (vector? x))
+                (into (empty x) (map walk-exprs' x))
 
-                  (instance? clojure.lang.IRecord x)
-                  x
+                (instance? clojure.lang.IRecord x)
+                x
 
-                  (map? x)
-                  (into (empty x) (map walk-exprs' x))
+                (map? x)
+                (into (empty x) (map walk-exprs' x))
 
-                  ;; special case to handle clojure.test
-                  (and (symbol? x) (-> x meta :test))
-                  (vary-meta x update-in [:test] walk-exprs')
+                ;; special case to handle clojure.test
+                (and (symbol? x) (-> x meta :test))
+                (vary-meta x update-in [:test] walk-exprs')
 
-                  :else
-                  x)]
-         (if (instance? clojure.lang.IObj x')
-           (with-meta x' (merge (meta x) (meta x')))
-           x')))))
+                :else
+                x)]
+       (merge-meta x' (meta x))))))
 
 ;;;
 

@@ -6,9 +6,9 @@
 
 (defmacro inc-numbers [& body]
   (r/walk-exprs
-    number?
-    inc
-    `(do ~@body)))
+   number?
+   inc
+   `(do ~@body)))
 
 (defmacro external-references [expr]
   (let [log (atom #{})]
@@ -33,6 +33,50 @@
 (defprotocol TestP
   (n [_]))
 
+(deftest merge-meta-test
+  (is (= {:a 1}
+         (meta (r/merge-meta {} {:a 1}))))
+  (is (= nil
+         (meta (r/merge-meta nil {:a 1} {:c 1}))))
+  (is (= {:a 2, :b 1, :c 1}
+         (meta (r/merge-meta (with-meta {} {:a 2}) {:a 1, :b 1} {:c 1})))))
+
+(deftest inline-fn-test
+  (doseq [[form expected] {'(+ 1)   nil
+                           `(+ 1)   nil
+                           '(+ 1 2) true
+                           `(+ 1 2) true
+                           '(int 1) true
+                           `(int 1) true
+                           `(n 1)   nil
+                           `+       nil
+                           `n       nil}
+          ;; any form with `::transformed` in its metadata should always come back as nil
+          [form expected] [[form                                              expected]
+                           [(with-meta form {:riddley.walk/transformed true}) nil]]]
+    (testing (binding [*print-meta* true] (pr-str (list 'inline-fn? form)))
+      (if expected
+        (is (fn? (r/inline-fn form)))
+        (is (= expected
+               (r/inline-fn form)))))))
+
+(deftest head=-test
+  (is (= true
+         (#'r/head= '(a b c) 'a)))
+  (is (= false
+         (#'r/head= '(a b c) 'b)))
+  (is (= false
+         (#'r/head= 1 'a))))
+
+(deftest expand-inline-fn-test
+  (is (= '(. clojure.lang.Numbers (and 2 1))
+         (r/expand-inline-fn '(bit-and 2 1) nil)))
+  (testing "Should throw an Exception if the form is not inlineable"
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"Form is not an inlineable function call"
+         (r/expand-inline-fn '(+ 1) nil)))))
+
 (deftest test-walk-exprs
   ;; the first and third numbers get incremented, but not the second
   (is (= 4 (inc-numbers (case 1 2 3))))
@@ -43,29 +87,29 @@
   (is (= 4 (inc-numbers (+ 1 1))))
   (is (= 4 (inc-numbers (let [n 1] (+ n 1)))))
   (is (= 42 (inc-numbers
-              (let [n 1]
-                (if (= n 1)
-                  41
-                  0)))))
+             (let [n 1]
+               (if (= n 1)
+                 41
+                 0)))))
   (is (= 2 (inc-numbers
-             (try
-               (/ 2 -1) ()
-               (catch Exception e
-                 1)))))
+            (try
+              (/ 2 -1) ()
+              (catch Exception e
+                1)))))
 
   (is (= 4 (n
-             (inc-numbers
-               (let [n 1]
-                 (reify TestP (n [_] (+ 1 n))))))))
+            (inc-numbers
+             (let [n 1]
+               (reify TestP (n [_] (+ 1 n))))))))
 
   (is (= 4 (n
-             (let [n 100]
-               (eval
-                 '(riddley.walk-test/inc-numbers
-                    (deftype Foo [n]
-                      riddley.walk-test/TestP
-                      (n [_] (+ 1 n)))
-                    (Foo. 1))))))))
+            (let [n 100]
+              (eval
+               '(riddley.walk-test/inc-numbers
+                 (deftype Foo [n]
+                   riddley.walk-test/TestP
+                   (n [_] (+ 1 n)))
+                 (Foo. 1))))))))
 
 (deftest test-macro-shadowing
   (is (= :yes
@@ -175,7 +219,6 @@
 (deftest walk-over-instance-expression-in-dot-forms
   (is (= '(. (. clojure.lang.Numbers (add 1 2)) toString)
          (r/macroexpand-all '(.toString (+ 1 2))))))
-
 
 (deftest meta-data-on-inline-function-macro-expasion
   (is (= {:foo :bar}
