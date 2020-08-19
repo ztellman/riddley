@@ -31,8 +31,7 @@
     (inline-fn '(+ 1 2)) ; -> #function[clojure.core/nary-inline/fn--5541]
     (inline-fn '(+ 1 2)) ; -> nil"
   [form]
-  (when (and (seq? form)
-             (not (::transformed (meta form))))
+  (when (seq? form)
     (let [[fn-symbol & args] form]
       (when (symbol? fn-symbol)
         ;; a function is inlineable if it has an `:inline` function in its metadata, and, if it has an
@@ -50,16 +49,9 @@
 
   ([form special-form?]
    (let [inline-fn (or (inline-fn form)
-                       (throw (ex-info "Form is not an inlineable function call." {:form form})))
-         expanded  (with-meta (apply inline-fn (rest form)) (meta form))]
+                       (throw (ex-info "Form is not an inlineable function call." {:form form})))]
      (macroexpand
-      ;; unfortunately, static function calls can look a lot like what we just
-      ;; expanded, so prevent infinite expansion
-      (if (head= expanded '.)
-        (with-meta
-          (concat (butlast expanded) [(merge-meta (last expanded) {::transformed true})])
-          (meta expanded))
-        expanded)
+      (with-meta (apply inline-fn (rest form)) (meta form))
       special-form?))))
 
 (defn- expand-list-like

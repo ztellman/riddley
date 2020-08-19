@@ -50,10 +50,7 @@
                            `(int 1) true
                            `(n 1)   nil
                            `+       nil
-                           `n       nil}
-          ;; any form with `::transformed` in its metadata should always come back as nil
-          [form expected] [[form                                              expected]
-                           [(with-meta form {:riddley.walk/transformed true}) nil]]]
+                           `n       nil}]
     (testing (binding [*print-meta* true] (pr-str (list 'inline-fn? form)))
       (if expected
         (is (fn? (r/inline-fn form)))
@@ -70,12 +67,12 @@
 
 (deftest expand-inline-fn-test
   (is (= '(. clojure.lang.Numbers (and 2 1))
-         (r/expand-inline-fn '(bit-and 2 1) nil)))
+         (r/expand-inline-fn '(bit-and 2 1))))
   (testing "Should throw an Exception if the form is not inlineable"
     (is (thrown-with-msg?
          clojure.lang.ExceptionInfo
          #"Form is not an inlineable function call"
-         (r/expand-inline-fn '(+ 1) nil)))))
+         (r/expand-inline-fn '(+ 1))))))
 
 (deftest test-walk-exprs
   ;; the first and third numbers get incremented, but not the second
@@ -223,3 +220,22 @@
 (deftest meta-data-on-inline-function-macro-expasion
   (is (= {:foo :bar}
          (meta (r/macroexpand (with-meta '(+ 1 1) {:foo :bar}))))))
+
+(deftest expand-nested-inline-fn-calls-test
+  (testing "Nested inlined function calls should get expanded correctly (#33)"
+    (is (= '(.
+             clojure.lang.Util
+             clojure.core/equiv
+             (. clojure.lang.RT (clojure.core/count [1 2]))
+             (. clojure.lang.RT (clojure.core/count [3 4])))
+           (r/macroexpand-all `(= (count [1 2]) (count [3 4]))))))
+  (testing "Make sure inline functions that are expanded to Java methods with the same name don't cause infinite recursive expansion"
+    (testing "(inc 1) expands to (. clojure.lang.Numbers (inc 1)) -- make sure the resultant `(inc 1)` isn't expanded again"
+      (is (= '(. clojure.lang.Numbers (inc 1))
+             (r/macroexpand-all `(inc 1)))))
+    (testing "(. clojure.lang.Numbers (inc 1)) on its own shouldn't get expanded"
+      (is (= '(. clojure.lang.Numbers (inc 1))
+             (r/macroexpand-all '(. clojure.lang.Numbers (inc 1))))))
+    (testing "(inc (inc 1)) *should* have get its nested inc call expanded"
+      (is (= '(. clojure.lang.Numbers (inc (. clojure.lang.Numbers (inc 1))))
+             (r/macroexpand-all `(inc (inc 1))))))))
