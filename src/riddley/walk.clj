@@ -216,7 +216,8 @@
              walk-exprs' (partial walk-exprs predicate handler special-form?)
              x' (cond
 
-                  (and (seq? x) (= 'var (first x)) (predicate x))
+                  (and (not (contains? special-form? 'var))
+                       (seq? x) (= 'var (first x)) (predicate x))
                   (handler (eval x))
 
                   (and (seq? x) (= 'quote (first x)) (not (predicate x)))
